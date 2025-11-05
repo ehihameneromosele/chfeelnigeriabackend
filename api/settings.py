@@ -1,32 +1,21 @@
 from pathlib import Path
 from dotenv import load_dotenv
 import os
-load_dotenv()
-import environ
 
+load_dotenv()
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
-# Initialize environment variables
-env = environ.Env()
-environ.Env.read_env(os.path.join(BASE_DIR, '.env'))
 
-
-
-# Quick-start development settings - unsuitable for production
-# See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
-
-# SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = str(os.getenv('SECRET_KEY'))
 
-# SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = False
+# TEMPORARY: Set to True to see detailed errors
+DEBUG = True
 
-ALLOWED_HOSTS = ["https://feelnigeriabackend-2.onrender.com","http://feelnigeriabackend-2.onrender.com","feelnigeriabackend-2.onrender.com"]
-
+# ALLOWED_HOSTS - only domains, no protocols
+ALLOWED_HOSTS = ['*']  # Allow all for testing
 
 # Application definition
-
 INSTALLED_APPS = [
     'django.contrib.admin',
     'django.contrib.auth',
@@ -40,10 +29,11 @@ INSTALLED_APPS = [
     'applications.apps.ApplicationsConfig',
 ]
 
+# MIDDLEWARE - CORS MUST BE AT THE VERY TOP
 MIDDLEWARE = [
+    'corsheaders.middleware.CorsMiddleware',  # MUST BE FIRST
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
-    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
@@ -51,9 +41,30 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
+# CORS SETTINGS - THIS WILL FIX THE ISSUE
+CORS_ALLOW_ALL_ORIGINS = True  # Allow all origins during development
+CORS_ALLOW_CREDENTIALS = True
 
-CORS_ALLOWED_ORIGINS = [
-   "https://feelnigerialogin.vercel.app/"
+# Additional CORS settings
+CORS_ALLOW_METHODS = [
+    'DELETE',
+    'GET',
+    'OPTIONS',
+    'PATCH',
+    'POST',
+    'PUT',
+]
+
+CORS_ALLOW_HEADERS = [
+    'accept',
+    'accept-encoding',
+    'authorization',
+    'content-type',
+    'dnt',
+    'origin',
+    'user-agent',
+    'x-csrftoken',
+    'x-requested-with',
 ]
 
 ROOT_URLCONF = 'api.urls'
@@ -75,10 +86,7 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'api.wsgi.application'
 
-
 # Database
-# https://docs.djangoproject.com/en/5.2/ref/settings/#databases
-
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
@@ -87,24 +95,21 @@ DATABASES = {
 }
 
 REST_FRAMEWORK = {
-
     'DEFAULT_AUTHENTICATION_CLASSES': (
-
-    'rest_framework_simplejwt.authentication.JWTAuthentication',
-    'rest_framework.authentication.SessionAuthentication',
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
+        'rest_framework.authentication.SessionAuthentication',
     )
-
 }
 
-
+# CSRF settings
 CSRF_TRUSTED_ORIGINS = [
     "https://feelnigeriabackend-2.onrender.com",
-    "https://feelnigerialogin.vercel.app/",
+    "https://feelnigerialogin.vercel.app",
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
 ]
 
 # Password validation
-# https://docs.djangoproject.com/en/5.2/ref/settings/#auth-password-validators
-
 AUTH_PASSWORD_VALIDATORS = [
     {
         'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
@@ -120,38 +125,23 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
-
 # Internationalization
-# https://docs.djangoproject.com/en/5.2/topics/i18n/
-
 LANGUAGE_CODE = 'en-us'
-
 TIME_ZONE = 'UTC'
-
 USE_I18N = True
-
 USE_TZ = True
 
-
-# Static files (CSS, JavaScript, Images)
-# https://docs.djangoproject.com/en/5.2/howto/static-files/
-
+# Static files
 STATIC_URL = 'static/'
 
-# ::: Media Config :::
-
+# Media Config
 MEDIA_URL = '/image/'
 MEDIA_ROOT = os.path.join(BASE_DIR,'image')
 
-# Default primary key field type
-# https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
-
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-EMAIL_BACKEND = env('EMAIL_BACKEND', default='django.core.mail.backends.smtp.EmailBackend')
+EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'  # Use console for testing
 DEFAULT_FROM_EMAIL = 'FeelNigeria@gmail.com'
-# Brevo (Sendinblue) API key
 BREVO_API_KEY = os.getenv("BREVO_API_KEY")
-# Verified sender email for Brevo
 BREVO_SENDER_EMAIL = os.getenv("BREVO_SENDER_EMAIL", "your-verified-email@example.com")
 BREVO_SENDER_NAME = os.getenv("BREVO_SENDER_NAME", "FeelNigeria")

@@ -9,13 +9,13 @@ from typing import Dict, Any
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        field = ['username','email']
+        fields = ['username','email']
 
 
 class ProfileSerializer(serializers.ModelSerializer):
     class Meta:
-        model = UserSerializer()
-        field = ['full_name','phone','nationality','preferred_destination']
+        model = Profile
+        fields = ['full_name','phone','nationality','preferred_destination']
 
 
 class RegistrationSerializer(serializers.ModelSerializer):
@@ -28,26 +28,30 @@ class RegistrationSerializer(serializers.ModelSerializer):
         model = Profile
         fields = ['full_name','phone','email','username','password','password1','is_verified','agreed_to_terms','nationality','preferred_destination']
 
-    def validate(self,data):
+    def validate(self, data):
+        # Check password match
         if data['password'] != data['password1']:
-            raise serializers.ValidationError('password does not match')
+            raise serializers.ValidationError({'password': 'Passwords do not match'})
+        
+        # Check agreed to terms
+        if not data.get('agreed_to_terms'):
+            raise serializers.ValidationError(
+                {'agreed_to_terms': 'You must agree to the terms and conditions to register.'}
+            )
+        
         return data
     
-    def validate(self, attrs):
-        if not attrs.get("agreed_to_terms"):
-            raise serializers.ValidationError(
-                {"agree to terms": "You must agree to the terms and conditions to register."}
-            )
-        return attrs
-    
     def create(self, validated_data: Dict[str, Any]):
-        validated_data.pop("agreed_to_terms", None)
-
         username = validated_data.pop('username')
         email = validated_data.pop('email')
         password = validated_data.pop('password')
-
-        user = User.objects.create_user(username=username,email=email,password=password)
+        validated_data.pop('password1')  # Remove confirm password
+        validated_data.pop('agreed_to_terms')  # Remove terms agreemen
+        user = User.objects.create_user(
+            username=username,
+            email=email,
+            password=password
+        )
 
         profile = Profile.objects.create(
             user = user,
@@ -55,11 +59,9 @@ class RegistrationSerializer(serializers.ModelSerializer):
             phone = validated_data['phone'],
             nationality = validated_data['nationality'],
             preferred_destination = validated_data['preferred_destination'],
-            # gender= validated_data['gender'],
-            # profile_pix = validated_data.get('profile_pix'),
             is_verified = False
         )
-        return user
+        return profile
 
 
 
