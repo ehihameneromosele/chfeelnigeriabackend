@@ -3,6 +3,7 @@ from rest_framework.response import Response
 from rest_framework import status,generics
 from rest_framework_simplejwt.tokens import RefreshToken, AccessToken
 
+
 from django.conf.global_settings import SECRET_KEY
 from django.contrib.auth import login,logout,authenticate
 from django.contrib.sites.shortcuts import get_current_site
@@ -97,17 +98,66 @@ class VerifyRegistrationView(generics.GenericAPIView):
             return Response({'Error':str(e)},status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 class LoginView(APIView):
-    def post(self,request):
+    def post(self, request):
         try:
-            username = request.data.get('username')
+            # Accept only email for login
+            email = request.data.get('email')
             password = request.data.get('password')
-            user = authenticate(username=username, password=password)            
-            if user is not None:
-                login(request,user)
-                return Response({'message':'user logged in successfully'}, status=status.HTTP_200_OK)
-            return Response({'message':'username/password seems to be incorrect'},status=status.HTTP_400_BAD_REQUEST)
+            
+            if not email:
+                return Response(
+                    {'message': 'Email is required'}, 
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            
+            if not password:
+                return Response(
+                    {'message': 'Password is required'}, 
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            
+            # Find user by email
+            try:
+                user = User.objects.get(email=email)
+            except User.DoesNotExist:
+                return Response(
+                    {'message': 'Invalid email or password'}, 
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            
+            # Authenticate the user using their username (from the User model)
+            authenticated_user = authenticate(username=user.username, password=password)
+            
+            if authenticated_user is not None:
+                # Generate JWT tokens
+                refresh = RefreshToken.for_user(authenticated_user)
+                
+                # Get user profile data
+                profile = Profile.objects.filter(user=authenticated_user).first()
+                
+                return Response({
+                    'message': 'Login successful',
+                    'access': str(refresh.access_token),
+                    'refresh': str(refresh),
+                    'user': {
+                        'id': authenticated_user.id,
+                        'username': authenticated_user.username,
+                        'email': authenticated_user.email,
+                        'full_name': profile.full_name if profile else authenticated_user.username,
+                        'is_verified': profile.is_verified if profile else False,
+                    }
+                }, status=status.HTTP_200_OK)
+            
+            return Response(
+                {'message': 'Invalid email or password'}, 
+                status=status.HTTP_400_BAD_REQUEST
+            )
+            
         except Exception as e:
-            return Response({"error":str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)     
+            return Response(
+                {"error": str(e)}, 
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )     
         
 class LogoutView(APIView):
     def post(self,request):
