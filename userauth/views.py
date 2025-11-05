@@ -24,17 +24,19 @@ from rest_framework.permissions import IsAuthenticated
 class RegistrationView(APIView):
     def post(self, request):
         try:
+            print("📥 Received data:", request.data)  # Debug log
+            
             serializer = RegistrationSerializer(data=request.data)
             if serializer.is_valid():
-                # Save the user
-                user = serializer.save()
+                profile = serializer.save()
+                user = profile.user
 
                 # Generate token for email verification
                 token = RefreshToken.for_user(user).access_token
 
                 # Build activation URL
                 current_site = get_current_site(request).domain
-                relative_link = reverse('verify')  # Ensure you have a URL pattern named 'verify'
+                relative_link = reverse('verify')
                 abs_url = f"http://{current_site}{relative_link}?token={str(token)}"
 
                 # Create HTML email content
@@ -49,35 +51,36 @@ class RegistrationView(APIView):
                 """
 
                 # Send activation email
-                sendMail(
-                    subject="Verify your email",
-                    html_content=email_html,
-                    sender_email=settings.BREVO_SENDER_EMAIL,
-                    recipient_email=user.email  # ✅ matches utils.py
-                )
+                try:
+                    sendMail(
+                        subject="Verify your email",
+                        html_content=email_html,
+                        sender_email=settings.BREVO_SENDER_EMAIL,
+                        recipient_email=user.email
+                    )
+                except Exception as email_error:
+                    print(f"⚠️ Email sending failed: {email_error}")
 
                 return Response(
-                    {"message": "Registration successful. Please check your email to verify your account."},
+                    {
+                        "message": "Registration successful. Please check your email to verify your account.",
+                        "user": {
+                            "username": user.username,
+                            "email": user.email,
+                            "full_name": profile.full_name
+                        }
+                    },
                     status=status.HTTP_201_CREATED
                 )
 
+            print("❌ Validation errors:", serializer.errors)  # Debug log
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
         except Exception as e:
+            print(f"❌ Exception: {str(e)}")  # Debug log
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         
-    def put(self,request,id):
-        try:
-            profile = get_object_or_404(Profile, id=id)
-            serializers = RegistrationSerializer(profile,data=request.data,partial=True)
-            if serializers.is_valid():
-                serializers.save()
-                return Response(serializers.data,status=status.HTTP_202_ACCEPTED)
-            return Response(serializers.errors,status=status.HTTP_400_BAD_REQUEST)
-
-        except Exception as e:
-            return Response({"Error":str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
+        
 class VerifyRegistrationView(generics.GenericAPIView):
     def get(self,request):
         token = request.GET.get('token')

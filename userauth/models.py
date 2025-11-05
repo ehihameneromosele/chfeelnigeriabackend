@@ -51,8 +51,6 @@ class Profile(models.Model):
     phone = models.CharField(max_length=50, null=True)
     nationality = models.CharField(max_length=100,null=True,blank=True)
     preferred_destination = models.CharField(max_length=255,choices=NIGERIAN_STATES,null=True,blank=True)
-    # gender = models.CharField(max_length=50, choices = GENDER_CHOICE)
-    # profile_pix = models.ImageField(upload_to='user_pix', default='https://thumbs.dreamstime.com/b/user-profile-icon-vector-avatar-person-picture-portrait-symbol-neutral-gender-silhouette-circle-button-photo-blank-272664038.jpg')
     agreed_to_terms = models.BooleanField(default=False)
     is_verified = models.BooleanField(default=False,null=True,blank=True)
 

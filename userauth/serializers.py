@@ -17,16 +17,17 @@ class ProfileSerializer(serializers.ModelSerializer):
         model = Profile
         fields = ['full_name','phone','nationality','preferred_destination']
 
-
 class RegistrationSerializer(serializers.ModelSerializer):
-    username = serializers.CharField(write_only = True)
-    password = serializers.CharField(write_only = True)
-    password1 = serializers.CharField(write_only = True)
-    email = serializers.EmailField(write_only = True)
+    username = serializers.CharField(write_only=True)
+    password = serializers.CharField(write_only=True)
+    password1 = serializers.CharField(write_only=True)
+    email = serializers.EmailField(write_only=True)
+    agreed_to_terms = serializers.BooleanField(write_only=True)
 
     class Meta:
         model = Profile
-        fields = ['full_name','phone','email','username','password','password1','is_verified','agreed_to_terms','nationality','preferred_destination']
+        fields = ['full_name', 'phone', 'email', 'username', 'password', 'password1', 
+                  'agreed_to_terms', 'nationality', 'preferred_destination']
 
     def validate(self, data):
         # Check password match
@@ -39,14 +40,23 @@ class RegistrationSerializer(serializers.ModelSerializer):
                 {'agreed_to_terms': 'You must agree to the terms and conditions to register.'}
             )
         
+        # Check if username exists
+        if User.objects.filter(username=data['username']).exists():
+            raise serializers.ValidationError({'username': 'Username already exists'})
+        
+        # Check if email exists
+        if User.objects.filter(email=data['email']).exists():
+            raise serializers.ValidationError({'email': 'Email already exists'})
+        
         return data
     
-    def create(self, validated_data: Dict[str, Any]):
+    def create(self, validated_data):
         username = validated_data.pop('username')
         email = validated_data.pop('email')
         password = validated_data.pop('password')
-        validated_data.pop('password1')  # Remove confirm password
-        validated_data.pop('agreed_to_terms')  # Remove terms agreemen
+        validated_data.pop('password1')
+        validated_data.pop('agreed_to_terms')
+        
         user = User.objects.create_user(
             username=username,
             email=email,
@@ -54,16 +64,12 @@ class RegistrationSerializer(serializers.ModelSerializer):
         )
 
         profile = Profile.objects.create(
-            user = user,
-            full_name = validated_data['full_name'],
-            phone = validated_data['phone'],
-            nationality = validated_data['nationality'],
-            preferred_destination = validated_data['preferred_destination'],
-            is_verified = False
+            user=user,
+            full_name=validated_data['full_name'],
+            phone=validated_data['phone'],
+            nationality=validated_data['nationality'],
+            preferred_destination=validated_data['preferred_destination'],
+            agreed_to_terms=True,  # Set to True since validation passed
+            is_verified=False
         )
         return profile
-
-
-
-
-

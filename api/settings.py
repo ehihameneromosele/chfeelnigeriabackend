@@ -112,7 +112,7 @@ REST_FRAMEWORK = {
 
 # CSRF settings
 CSRF_TRUSTED_ORIGINS = [
-    "https://feelnigeriabackend-2.onrender.com",
+    "https://chfeelnigeriabackend.onrender.com",
     "https://feelnigerialogin.vercel.app",
     "http://localhost:5173",
     "http://127.0.0.1:5173",
